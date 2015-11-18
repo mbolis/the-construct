@@ -7,71 +7,42 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class Session extends Thread {
+public class Session {
 
-    private final Socket socket;
     private final BufferedReader reader;
     private final PrintWriter writer;
 
-    private final String login;
-    private final String password;
-
+    private String name;
     private boolean open = true;
 
-    public Session(Socket socket) throws IOException {
-        this.socket = socket;
-
+    Session(Socket socket) throws IOException {
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-        String login = reader.readLine();
-        if (login == null) {
-            throw new IOException();
-        }
-
-        login = login.trim();
-        System.out.println(login);
-        if (login.isEmpty()) {
-            throw new IOException();
-        }
-
-        writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
-
-        writer.println(login);
-        writer.flush();
-        String password = reader.readLine();
-        if (password == null) {
-            throw new IOException();
-        }
-
-        this.login = login;
-        this.password = password.trim();
-        setName(login + "@" + System.currentTimeMillis());
+        writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
     }
 
-    public String getLogin() {
-        return login;
+    public String getName() {
+        return name;
     }
 
-    public String getPassword() {
-        return password;
+    void setName(String name) {
+        this.name = name;
     }
 
-    @Override
-    public void run() {
-        while (open) {
-            try {
-                String cmd = reader.readLine();
-                if (cmd == null) {
-                    close();
-                    break;
-                }
+    public boolean isOpen() {
+        return open;
+    }
 
-                System.out.println(cmd);
+    public String prompt(String message) throws IOException {
+        writer.printf("%s: ", message);
+        return reader.readLine();
+    }
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    public void send(String message) throws IOException {
+        writer.println(message);
+    }
+
+    public String receive() throws IOException {
+        return reader.readLine();
     }
 
     public void close() throws IOException {
@@ -79,4 +50,5 @@ public class Session extends Thread {
         writer.close();
         reader.close();
     }
+
 }

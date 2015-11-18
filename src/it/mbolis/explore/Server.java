@@ -1,6 +1,8 @@
 package it.mbolis.explore;
 
 import static java.util.Collections.singletonMap;
+import it.mbolis.explore.handler.EchoSessionHandler;
+import it.mbolis.explore.handler.StatusPushSessionHandler;
 import it.mbolis.explore.session.LoginSessionFactory;
 import it.mbolis.explore.session.Session;
 import it.mbolis.explore.session.SessionFactory;
@@ -38,7 +40,19 @@ public class Server extends Thread {
             try {
                 clientSocket = serverSocket.accept();
                 Session session = sessionFactory.createSession(clientSocket);
-                session.start();
+                new EchoSessionHandler(session).start();
+                StatusPushSessionHandler statusPush = new StatusPushSessionHandler(session);
+                new Thread(() -> {
+                    while (session.isOpen()) {
+                        statusPush.push("tic");
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                    }
+                }).start();
+                statusPush.start();
             } catch (IOException e) {
                 if (clientSocket != null) {
                     try {

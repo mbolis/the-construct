@@ -17,8 +17,24 @@ public class LoginSessionFactory implements SessionFactory {
     @Override
     public Session createSession(Socket socket) throws IOException {
         Session session = new Session(socket);
-        String login = session.getLogin();
-        String password = session.getPassword();
+
+        String login;
+        do {
+            login = session.prompt("username");
+            if (login == null) {
+                throw new IOException();
+            }
+            login = login.trim();
+        } while (login.isEmpty());
+
+        String password;
+        do {
+            password = session.prompt("password");
+            if (password == null) {
+                throw new IOException();
+            }
+            password = password.trim();
+        } while (password.isEmpty());
 
         if (!password.equals(auth.get(login))) {
             session.close();
@@ -29,6 +45,7 @@ public class LoginSessionFactory implements SessionFactory {
         if (oldSession != null) {
             oldSession.close();
         }
+        session.setName(login + "@" + System.currentTimeMillis());
         sessions.put(login, session);
         return session;
     }
