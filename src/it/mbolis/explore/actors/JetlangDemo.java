@@ -4,6 +4,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.jetlang.channels.Channel;
+import org.jetlang.channels.MemoryChannel;
+import org.jetlang.core.Callback;
 import org.jetlang.core.Disposable;
 import org.jetlang.fibers.Fiber;
 import org.jetlang.fibers.PoolFiberFactory;
@@ -12,39 +15,56 @@ import fi.jumi.actors.ActorRef;
 
 public class JetlangDemo {
 
-    public static class MiaoImpl implements Miao {
-        private final int id = ++count;
+    public static abstract class Actor<T> {
+        private final Fiber fiber;
+        private final Channel<T> inbox;
 
-        @Override
-        public void miao() {
-            while (true) {
-                System.out.println(id + ": miaoooooooo");
-            }
+        public Actor(Fiber fiber) {
+            this(fiber, new MemoryChannel<T>());
         }
-    }
 
-    public static interface Miao {
-        public void miao();
+        public Actor(Fiber fiber, Channel<T> inbox) {
+            this.fiber = fiber;
+            this.inbox = inbox;
+            inbox.subscribe(fiber, this::receive);
+        }
+
+        protected abstract void receive(T message);
+
+        public final void send(T message) {
+            inbox.publish(message);
+        }
     }
 
     private static int count = 0;
 
+    public static class Miao extends Actor<String> {
+
+        private final int id = ++count;
+
+        public Miao(Fiber fiber) {
+            super(fiber);
+        }
+
+        @Override
+        protected void receive(String message) {
+            System.out.println(id + ": " + message);
+        }
+    }
+
     public static void main(String[] args) {
         ExecutorService actorsThreadPool = Executors.newFixedThreadPool(2);
         PoolFiberFactory fiberFactory = new PoolFiberFactory(actorsThreadPool);
-        CountDownLatch onstop = new CountDownLatch(2);
-        Disposable dispose = onstop::countDown;
 
         Fiber fiber = fiberFactory.create();
-        fiber.add(dispose);
+        Miao demo1 = new Miao(fiber);
+        Miao demo2 = new Miao(fiber);
 
-        ActorRef<Miao> demo1 = actorThread.bindActor(Miao.class, new MiaoImpl());
-        ActorRef<Miao> demo2 = actorThread.bindActor(Miao.class, new MiaoImpl());
-        demo1.tell().miao();
-        demo2.tell().miao();
-        System.out.println("actors started.");
+        fiber.start();
+        demo1.send("miaoooo");
+        demo2.send("miaoooo");
+        System.out.println("started!");
 
-        actorThread.stop();
-        actorsThreadPool.shutdown();
+        fiber.dispose();
     }
 }
