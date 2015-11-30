@@ -1,74 +1,113 @@
 package it.mbolis.explore;
 
 import static java.util.Collections.singletonMap;
-import it.mbolis.explore.handler.EchoSessionHandler;
-import it.mbolis.explore.handler.StatusPushSessionHandler;
-import it.mbolis.explore.session.LoginSessionFactory;
-import it.mbolis.explore.session.Session;
-import it.mbolis.explore.session.SessionFactory;
 
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.util.Scanner;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
+import it.mbolis.explore.session.AsyncSession;
+import it.mbolis.explore.session.LoginSessionFactory;
+import it.mbolis.explore.session.SessionFactory;
 
 public class Server extends Thread {
 
-    private final ServerSocket serverSocket;
+	private final AsynchronousServerSocketChannel serverSocket;
 
-    private SessionFactory sessionFactory;
+	private final SessionContainer sessionContainer;
 
-    private Server() {
-        this(0);
-    }
+	private Server(SessionFactory sessionFactory) {
+		this(sessionFactory, 0);
+	}
 
-    private Server(int port) {
-        ServerSocket server = null;
-        try {
-            server = new ServerSocket(port);
-            System.out.println("Listening on port " + server.getLocalPort());
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-        serverSocket = server;
-    }
+	private Server(SessionFactory sessionFactory, int port) {
+		this.sessionContainer = new SessionContainer(sessionFactory);
 
-    @Override
-    public void run() {
-        while (true) {
-            Socket clientSocket = null;
-            try {
-                clientSocket = serverSocket.accept();
-                Session session = sessionFactory.createSession(clientSocket);
-                new EchoSessionHandler(session).start();
-                StatusPushSessionHandler statusPush = new StatusPushSessionHandler(session);
-                new Thread(() -> {
-                    while (session.isOpen()) {
-                        statusPush.push("tic");
-                        try {
-                            Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                }).start();
-                statusPush.start();
-            } catch (IOException e) {
-                if (clientSocket != null) {
-                    try {
-                        clientSocket.close();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-                e.printStackTrace();
-            }
-        }
-    }
+		AsynchronousServerSocketChannel server = null;
+		try {
+			server = AsynchronousServerSocketChannel.open();
+			InetSocketAddress address = new InetSocketAddress(port);
+			server.bind(address);
+			address = (InetSocketAddress) server.getLocalAddress();
+			System.out.println("Listening on port " + address.getPort());
+		} catch (IOException e) {
+			System.err.println("Could not start server.");
+			e.printStackTrace();
+			System.exit(1);
+		}
+		serverSocket = server;
+	}
 
-    public static void main(String[] args) {
-        Server server = new Server();
-        server.sessionFactory = new LoginSessionFactory(singletonMap("mbolis", "miao"));
-        server.start();
-    }
+	private volatile boolean running;
+	private volatile Future<AsynchronousSocketChannel> accepting;
+
+	@Override
+	public void run() {
+
+		sessionContainer.start();
+		running = true;
+
+		new Thread(() -> {
+			try (Scanner commandline = new Scanner(System.in)) {
+				String cmd;
+				while ((cmd = commandline.nextLine()) != null) {
+					if ("quit".equals(cmd)) {
+						running = false;
+						accepting.cancel(true);
+						return;
+					}
+				}
+			}
+		}).start();
+
+		while (running) {
+			accepting = serverSocket.accept();
+			AsynchronousSocketChannel clientSocket;
+			try {
+				clientSocket = accepting.get();
+			} catch (InterruptedException | CancellationException e) {
+				break;
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+				continue;
+			}
+			try {
+				AsyncSession session = sessionContainer.register(clientSocket).get();
+				session.readLine(System.out::println);
+				session.send("OK");
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
+				break;
+			}
+			// new EchoSessionHandler(session).start();
+			// StatusPushSessionHandler statusPush = new
+			// StatusPushSessionHandler(session);
+			// new Thread(() -> {
+			// while (session.isOpen()) {
+			// statusPush.push("tic");
+			// try {
+			// Thread.sleep(1000);
+			// } catch (InterruptedException e) {
+			// break;
+			// }
+			// }
+			// }).start();
+			// statusPush.start();
+		}
+
+		try {
+			sessionContainer.shutdown();
+		} catch (Exception e) {
+		}
+	}
+
+	public static void main(String[] args) {
+		Server server = new Server(new LoginSessionFactory(singletonMap("mbolis", "miao")));
+		server.start();
+	}
 }
