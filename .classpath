@@ -3,6 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/jumi-actors-1.1-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/jetlang-0.2.13-SNAPSHOT.jar" sourcepath="/home/developer/Libs/jetlang/src/main/java"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.8.0_31"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
