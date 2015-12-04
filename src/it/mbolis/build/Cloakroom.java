@@ -24,7 +24,6 @@ public class Cloakroom implements Helper {
 
     @Override
     public void serve(Client client, String request) {
-        // TODO Auto-generated method stub
 
     }
 
