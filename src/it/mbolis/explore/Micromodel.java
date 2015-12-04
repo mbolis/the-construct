@@ -1,22 +1,22 @@
 package it.mbolis.explore;
 
+import static java.util.Arrays.copyOfRange;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PipedReader;
 import java.io.PipedWriter;
 import java.io.Reader;
-import java.util.Map;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.jetlang.channels.Channel;
 import org.jetlang.channels.MemoryChannel;
 import org.jetlang.fibers.Fiber;
-import org.jetlang.fibers.PoolFiberFactory;
 
 public class Micromodel {
 
@@ -50,15 +50,19 @@ public class Micromodel {
     private static class SocketListener extends Thread {
 
         final BufferedReader reader;
-        final Actor<String> commandParser;
+        final CommandParser commandParser;
+        final ActionScheduler scheduler;
 
-        public SocketListener(Reader reader, Actor<String> commandParser) {
+        int delay;
+
+        public SocketListener(Reader reader, CommandParser commandParser, ActionScheduler scheduler) {
             if (reader instanceof BufferedReader) {
                 this.reader = (BufferedReader) reader;
             } else {
                 this.reader = new BufferedReader(reader);
             }
             this.commandParser = commandParser;
+            this.scheduler = scheduler;
         }
 
         @Override
@@ -66,7 +70,9 @@ public class Micromodel {
             String message;
             try {
                 while ((message = reader.readLine()) != null) {
-                    commandParser.send(message);
+                    CommandParser.Command cmd = commandParser.parse(message);
+                    scheduler.send(cmd, delay);
+                    delay = 1000;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -79,40 +85,40 @@ public class Micromodel {
         }
     }
 
-    private static class CommandParser extends Actor<String> {
+    private static class CommandParser {
 
-        final ActionScheduler scheduler;
+        static class Command {
+            final String name;
+            final String[] arguments;
 
-        int delay;
+            public Command(String name, String... arguments) {
+                this.name = name;
+                this.arguments = arguments;
+            }
 
-        CommandParser(Fiber fiber, ActionScheduler scheduler) {
-            super(fiber);
-            this.scheduler = scheduler;
+            @Override
+            public String toString() {
+                return "Cmd:" + name + " " + Arrays.toString(arguments);
+            }
         }
 
-        @Override
-        void act(String message) {
-            scheduler.send(world -> world.put("message", message), delay);
+        Command parse(String input) {
+            String[] parts = input.trim().split("\\s+");
+            return new Command(parts[0], copyOfRange(parts, 1, parts.length));
         }
+
     }
 
-    private static class ActionScheduler extends Actor<Consumer<Map<String, String>>> {
+    private static class ActionScheduler {
 
         final ScheduledExecutorService scheduler;
 
-        ActionScheduler(Fiber fiber, ScheduledExecutorService scheduler) {
-            super(fiber);
+        ActionScheduler(ScheduledExecutorService scheduler) {
             this.scheduler = scheduler;
         }
 
-        public void send(Consumer<Map<String, String>> action, int delay) {
-            scheduler.schedule(, delay, TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        void act(Consumer<Map<String, String>> message) {
-            // TODO Auto-generated method stub
-
+        public void send(CommandParser.Command action, int delay) {
+            scheduler.schedule(() -> System.out.println(action), delay, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -121,13 +127,14 @@ public class Micromodel {
                 PipedWriter pipeOut = new PipedWriter(pipeIn);
                 Scanner input = new Scanner(System.in)) {
 
-            ExecutorService scheduler = Executors.newFixedThreadPool(4);
-            PoolFiberFactory factory = new PoolFiberFactory(scheduler);
+            ExecutorService executor = Executors.newFixedThreadPool(4);
 
-            CommandParser commandParser = new CommandParser(factory.create(), scheduler);
-            commandParser.start();
+            CommandParser commandParser = new CommandParser();
 
-            SocketListener socketListener = new SocketListener(pipeIn, commandParser);
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+            ActionScheduler actionScheduler = new ActionScheduler(scheduler);
+
+            SocketListener socketListener = new SocketListener(pipeIn, commandParser, actionScheduler);
             socketListener.start();
 
             while (input.hasNextLine()) {
@@ -136,8 +143,14 @@ public class Micromodel {
                 pipeOut.flush();
             }
 
-            commandParser.send("!DIE");
+            executor.shutdown();
             scheduler.shutdown();
+
+            try {
+                scheduler.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
     }

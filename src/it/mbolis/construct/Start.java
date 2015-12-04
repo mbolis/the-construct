@@ -48,7 +48,7 @@ public class Start {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
 
             System.out.print("> ");
-            
+
             String line;
             while ((line = in.readLine()) != null) {
                 line = line.trim();
@@ -66,8 +66,8 @@ public class Start {
                                 break;
                             }
                             String value = m.group(g++);
-                            if (value.startsWith("'") && value.endsWith("'") || value.startsWith("\"'")
-                                    && value.endsWith("\"'")) {
+                            if (value.startsWith("'") && value.endsWith("'")
+                                    || value.startsWith("\"'") && value.endsWith("\"'")) {
                                 value = value.replaceFirst("^.(.*).$", "$1");
                             }
                             if (type.equals(String.class)) {
@@ -93,7 +93,7 @@ public class Start {
                         break;
                     }
                 }
-                
+
                 System.out.print("> ");
             }
 

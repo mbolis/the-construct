@@ -37,7 +37,7 @@ public class Main {
         String dump(String key);
 
         List<String> list();
-        
+
         boolean has(String key);
     }
 
@@ -114,7 +114,7 @@ public class Main {
                             if (value == null) {
                                 value = "";
                             }
-                            
+
                             StringBuilder def = new StringBuilder(value);
                             String defLine = "";
                             boolean valid = false;
@@ -135,17 +135,19 @@ public class Main {
                             } while (!defLine.trim().isEmpty());
 
                             if (valid) {
-//                                try {
-//                                    
-//                                    
-//                                    Object toStore = store.get(key);
-//                                    
-//                                    Object toStore = js.eval(format("", key, def.toString()));
-//                                    store.store(toStore);
-//
-//                                } catch (ScriptException e) {
-//                                    System.out.println("\u001b[31mempty input.\u001b[m");
-//                                }
+                                // try {
+                                //
+                                //
+                                // Object toStore = store.get(key);
+                                //
+                                // Object toStore = js.eval(format("", key,
+                                // def.toString()));
+                                // store.store(toStore);
+                                //
+                                // } catch (ScriptException e) {
+                                // System.out.println("\u001b[31mempty
+                                // input.\u001b[m");
+                                // }
                             } else {
                                 System.out.println("\u001b[31munrecognized object.");
                                 System.out.println(error + "\u001b[m");
@@ -165,7 +167,7 @@ public class Main {
                                 System.out.println("\u001b[33m" + key + " already exists.\u001b[m");
                                 break;
                             }
-                            
+
                             String value = m.group(2);
                             if (value == null) {
                                 value = "";

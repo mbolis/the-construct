@@ -63,8 +63,8 @@ public class ActorContext {
     }
 
     static final class Pool {
-        static final ExecutorService executors = Executors.newFixedThreadPool(Runtime.getRuntime()
-                .availableProcessors());
+        static final ExecutorService executors = Executors
+                .newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         private static PoolFiberFactory fiberFactory = new PoolFiberFactory(executors);
 
         public static <T> Fiber create(Consumer<T> callback) {

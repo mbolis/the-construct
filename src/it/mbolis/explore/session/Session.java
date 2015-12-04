@@ -11,46 +11,46 @@ import java.util.concurrent.ExecutionException;
 
 public class Session {
 
-	private final BufferedReader reader;
-	private final PrintWriter writer;
+    private final BufferedReader reader;
+    private final PrintWriter writer;
 
-	private String name;
-	private boolean open = true;
+    private String name;
+    private boolean open = true;
 
-	Session(Socket socket) throws IOException {
-		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
-	}
+    Session(Socket socket) throws IOException {
+        reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	void setName(String name) {
-		this.name = name;
-	}
+    void setName(String name) {
+        this.name = name;
+    }
 
-	public boolean isOpen() {
-		return open;
-	}
+    public boolean isOpen() {
+        return open;
+    }
 
-	public String prompt(String message) throws IOException {
-		writer.printf("%s: ", message);
-		return reader.readLine();
-	}
+    public String prompt(String message) throws IOException {
+        writer.printf("%s: ", message);
+        return reader.readLine();
+    }
 
-	public void send(String message) throws IOException {
-		writer.println(message);
-	}
+    public void send(String message) throws IOException {
+        writer.println(message);
+    }
 
-	public String receive() throws IOException {
-		return reader.readLine();
-	}
+    public String receive() throws IOException {
+        return reader.readLine();
+    }
 
-	public void close() throws IOException {
-		open = false;
-		writer.close();
-		reader.close();
-	}
+    public void close() throws IOException {
+        open = false;
+        writer.close();
+        reader.close();
+    }
 
 }

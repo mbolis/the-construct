@@ -61,9 +61,9 @@ public class PrototypeRoom {
             try {
                 Bindings bindings = js.createBindings();
                 bindings.put("prototype", prototype);
-                String[][] properties = (String[][]) js
-                        .eval("var p=prototype;Java.to(p.keys().map(function(k) {return Java.to([k, JSON.stringify(p[k])], 'java.lang.String[]')}), 'java.lang.String[][]')",
-                                bindings);
+                String[][] properties = (String[][]) js.eval(
+                        "var p=prototype;Java.to(p.keys().map(function(k) {return Java.to([k, JSON.stringify(p[k])], 'java.lang.String[]')}), 'java.lang.String[][]')",
+                        bindings);
                 for (String[] row : properties) {
                     System.out.println(row[0] + " : " + row[1]);
                 }

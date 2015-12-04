@@ -21,7 +21,7 @@ public class Connection extends Thread implements Closeable {
     private final BufferedWriter writer;
     private final MessageDispatcher dispatcher;
 
-    private Status status;
+    private Status status = Status.IDENTIFY;
 
     public Connection(Socket socket, MessageDispatcher dispatcher) throws IOException {
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), UTF8));
