@@ -1,0 +1,69 @@
+Period = Sentence (Space THEN Space Sentence)* EOT {command} ;
+Sentence = (Tell Space)? Listener (SpeechSep / Space) Speech {tellSentence}
+         / Say (SpeechSep / Space) Speech {saySentence}				// a line starting with ":" will be an alias to this
+		 / Verb (Space Complement)* {sentence} ;
+Complement = (Preposition Space)? Nominals {nominalComplement}
+           / ":" Space? RestOfInput {fullSpeechComplement};
+Nominals = Nominal (Space Nominal)* {nominals} ;
+
+
+
+say hello
+say "hello" to johnny
+tell johnny hello
+ask johnny why?
+:hello!
+johnny why?
+cast room "mumbo jumbo" with ebony wand
+cast johnny : vita mortis carior
+
+
+Quoted = "\"" _++ ("\"" / EOT)
+       / "'" _++ ("'" / EOT) ;
+Speech = Quoted
+	   / RestOfInput ;
+
+
+
+
+// VERBS
+Say = Word {&} ;
+Tell = Word {&} ;
+Verb = Word {&} ;
+
+// TARGETS
+Listener = Word {&} ;
+
+
+
+Preposition = Word {&} ;
+
+Nominal = (Article Space)? Descriptor (Space Descriptor)* {}
+		/ Pronoun {} ;
+Descriptor = Word Genitive? {}
+           / Preposition Space Descriptor {} ;
+Genitive = "'s" ;
+
+
+
+Word = ^[ \t\n\r]+ ;
+Space = [ \t]+ ;
+Conjunction = And / Comma ;
+And = [aA][nN][dD] ;
+Comma = "," ;
+Article = Definite / Indefinite ;
+Definite = [tT][hH][eE] ;
+Indefinite = [aA][nN]? ;
+Pronoun = It / Them / Me ;
+It = [iI][tT] ;
+Them = [tT][hH][eE][mM] ;
+Me = [mM][eE] ;
+
+
+// KEYWORDS
+THEN = [tT][hH][eE][nN] ;
+
+// SPECIAL
+SpeechSep = Space? ":" Space? ;
+RestOfInput = _++ EOT ;
+EOT = !_ ;
